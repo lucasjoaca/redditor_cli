@@ -1,4 +1,5 @@
 use clap::{Parser, ValueEnum};
+use reqwest::Client;
 use serde::Deserialize;
 use std::error::Error;
 #[derive(Parser, Debug)]
@@ -53,20 +54,34 @@ struct RedditPost {
 
 
 
-fn fetch_subreddit(subreddit:String, sort:SortOrder) -> Vec<RedditPost>{
+async fn fetch_subreddit(subreddit:String, sort:SortOrder) -> Result<Vec<RedditPost>, Box<dyn Error>>{
     let sort_type = match sort{
         SortOrder::Hot => "hot",
         SortOrder::New => "new",
         SortOrder::Top => "top",
     };
     let url = format!("https://www.reddit.com/r/{}/{}.json", subreddit, sort_type);
+    
+    
+    let resp = reqwest::get(&url).await?;
+    
+    //? I get status 403 for some reason, it gets blacklisted if i do it like this?
+    println!("Response:{:?} ", resp);
+    
 
+    let json_data: Response = resp.json().await?;
+
+    let posts = json_data.data.children.into_iter().map(|c| c.data).collect();
+    Ok(posts)
 }
 
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Args =  Args::parse();
     println!("Subbreddit: {}", args.subreddit);
     println!("Sort Order: {:?}", args.sort);
     println!("Interval: {}", args.interval);
-}
+    match fetch_subreddit(args.subreddit, args.sort).await {
+        Ok(_) => println!("Done!"),
+        Err(e) => eprintln!("Error: {}", e),
+    }}

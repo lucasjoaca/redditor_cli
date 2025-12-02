@@ -88,7 +88,7 @@ async fn fetch_subreddit(client: &Client, subreddit:&String, sort:&SortOrder) ->
 
 // ! optimization done
 fn save_posts(new_posts:&Vec<RedditPost>, filename:&str) {
-    if !new_posts.is_empty(){
+    if new_posts.is_empty(){
         return;
     }    
 
@@ -155,7 +155,7 @@ async fn main() {
                     
                 }
             }    
-            if !new_posts_to_save.is_empty() {
+            if new_posts_to_save.is_empty() {
                 println!("No new posts from {} seconds ago", args.interval);
             }
             save_posts(&new_posts_to_save, &filename);

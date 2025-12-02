@@ -134,7 +134,7 @@ async fn main() {
    
    // ?? OPTIMIZATION, now i create the client only once, not every n seconds
     let client = Client::builder().user_agent("rust-redditor").build().unwrap_or_default();
-    let filename = format!("{}.json", args.subreddit);
+    let filename = format!("subreddits/{}.json", args.subreddit);
 
 
     loop{

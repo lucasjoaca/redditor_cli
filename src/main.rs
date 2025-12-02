@@ -57,7 +57,7 @@ struct RedditPost {
 
 
 
-async fn fetch_subreddit(subreddit:&String, sort:&SortOrder) -> Result<Vec<RedditPost>, Box<dyn Error>>{
+async fn fetch_subreddit(client: &Client, subreddit:&String, sort:&SortOrder) -> Result<Vec<RedditPost>, Box<dyn Error>>{
     let sort_type = match sort{
         SortOrder::Hot => "hot",
         SortOrder::New => "new",
@@ -66,10 +66,7 @@ async fn fetch_subreddit(subreddit:&String, sort:&SortOrder) -> Result<Vec<Reddi
     let url = format!("https://www.reddit.com/r/{}/{}.json", subreddit, sort_type);
    //? Apparently i need to use a User_agent bc reddit blacklists it otherwise, from what i've understood, the user_agent works like a ID badge
    //? if i use simply reqwest, it sees it as a possible attack/spam and it blacklists it
-    let client = match Client::builder().user_agent("rust-redditor").build(){
-        Ok(c) => c,
-        Err(e) => return Err(e.into()),
-    };
+   
     let resp = client.get(&url).send().await?;
 
     if !resp.status().is_success() {
@@ -89,9 +86,13 @@ async fn fetch_subreddit(subreddit:&String, sort:&SortOrder) -> Result<Vec<Reddi
 
 // TODO cant i make this more efficient, instead of adding only 1 post, to add every new pos that appeared in the last N seconds?
 
-fn save_post(post:&RedditPost, filename:&str) {
-        
-    let mut posts: Vec<RedditPost> =  match File::open(filename){
+// ! optimization done
+fn save_posts(new_posts:&Vec<RedditPost>, filename:&str) {
+    if !new_posts.is_empty(){
+        return;
+    }    
+
+    let mut all_posts: Vec<RedditPost> =  match File::open(filename){
         Ok(f) => { // the file exists so we read its content
             let rdr = BufReader::new(f);
             serde_json::from_reader(rdr).unwrap_or_default()
@@ -103,15 +104,15 @@ fn save_post(post:&RedditPost, filename:&str) {
             Vec::new()
         }
     };
-
-    //? add the new post
-    posts.push(post.clone());
+    for post in new_posts {
+        all_posts.push(post.clone());
+    }
 
    // DELETE old file and replace it with it's updated version
 
     match File::create(filename) {
         Ok(f) => { 
-           let _ =  serde_json::to_writer_pretty(f, &posts);
+           let _ =  serde_json::to_writer_pretty(f, &all_posts);
         },
         Err(_) => {
             println!("Could not update the file!");
@@ -129,22 +130,31 @@ async fn main() {
     println!("Sort Order: {:?}", args.sort);
     println!("Interval: {}", args.interval);
     let mut seen_posts: HashSet<String> = HashSet::new(); // here i will store the id of each post, i keep track of wether or not i have seen it
-    
+   
+   // ?? OPTIMIZATION, now i create the client only once, not every n seconds
+    let client = Client::builder().user_agent("rust-redditor").build().unwrap_or_default();
+
+
+
     loop{
-        let mut new_posts = 0; 
         println!("-------------------------------------");
-        match fetch_subreddit(&args.subreddit, &args.sort).await {
+        match fetch_subreddit(&client, &args.subreddit, &args.sort).await {
         Ok(posts) => { 
+            
+            let mut new_posts_to_save: Vec<RedditPost> = Vec::new();
+            
+             // here i store all the new posts so i can optimie the program
             for post in posts {
                 if !seen_posts.contains(&post.id) {
                     println!("Title: {} \n Creation_Date: {} \n PermaLink: https://reddit.com{} \n ", post.title, post.created_utc, post.permalink);
                     println!("-------------------------------------");
                     seen_posts.insert(post.id.clone());
-                    new_posts += 1;
-                    save_post(&post, "feed.json");
+
+                    new_posts_to_save.push(post.clone());
+                    save_posts(&new_posts_to_save, "feed.json");
                 }
             }    
-            if new_posts == 0 {
+            if !new_posts_to_save.is_empty() {
                 println!("No new posts from {} seconds ago", args.interval);
             }
         },

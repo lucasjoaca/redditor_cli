@@ -1,9 +1,11 @@
 use clap::{Parser, ValueEnum};
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::collections::HashSet;
+use std::io::BufReader;
 use std::time::Duration;
+use std::fs::File;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args{
@@ -33,7 +35,7 @@ enum SortOrder{
 
 #[derive(Debug, Deserialize)]
 struct Response{
-    data: Children,
+    data: Children, 
 }
 #[derive(Debug, Deserialize)]
 struct Children{
@@ -44,7 +46,7 @@ struct Children{
 struct PostContainer{
     data: RedditPost,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct RedditPost {
     id: String,
     created_utc: f64,
@@ -82,6 +84,47 @@ async fn fetch_subreddit(subreddit:&String, sort:&SortOrder) -> Result<Vec<Reddi
     Ok(posts)
 }
 
+
+// & so i wont consume it (forgot to add it initially :) ) 
+
+// TODO cant i make this more efficient, instead of adding only 1 post, to add every new pos that appeared in the last N seconds?
+
+fn save_post(post:&RedditPost, filename:&str) {
+        
+    let mut posts: Vec<RedditPost> =  match File::open(&filename){
+        Ok(f) => { // the file exists so we read its content
+            let rdr = BufReader::new(f);
+            match serde_json::from_reader(rdr) {
+                Ok(old_posts) => old_posts,
+                Err(_) => Vec::new(),  // if empty or cant read the content then create a fresh list
+            }
+        }
+
+        Err(_) => { //? if i cant open it then i just create a fresh list
+            println!("Error when trying to open {} ", filename);
+            println!("Creating a new file...");
+            Vec::new()
+        }
+    };
+
+    //? add the new post
+    posts.push(post.clone());
+
+   // DELETE old file and replace it with it's updated version
+
+    match File::create(&filename) {
+        Ok(f) => { 
+            serde_json::to_writer_pretty(f, &posts);
+        },
+        Err(_) => {
+            println!("Could not update the file!");
+    }
+    }
+
+}
+
+
+
 #[tokio::main]
 async fn main() {
     let args: Args =  Args::parse();
@@ -99,8 +142,9 @@ async fn main() {
                 if !seen_posts.contains(&post.id) {
                     println!("Title: {} \n Creation_Date: {} \n PermaLink: https://reddit.com{} \n ", post.title, post.created_utc, post.permalink);
                     println!("-------------------------------------");
-                    seen_posts.insert(post.id);
+                    seen_posts.insert(post.id.clone());
                     new_posts += 1;
+                    save_post(&post, "feed.json");
                 }
             }    
             if new_posts == 0 {

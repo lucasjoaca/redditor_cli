@@ -91,13 +91,10 @@ async fn fetch_subreddit(subreddit:&String, sort:&SortOrder) -> Result<Vec<Reddi
 
 fn save_post(post:&RedditPost, filename:&str) {
         
-    let mut posts: Vec<RedditPost> =  match File::open(&filename){
+    let mut posts: Vec<RedditPost> =  match File::open(filename){
         Ok(f) => { // the file exists so we read its content
             let rdr = BufReader::new(f);
-            match serde_json::from_reader(rdr) {
-                Ok(old_posts) => old_posts,
-                Err(_) => Vec::new(),  // if empty or cant read the content then create a fresh list
-            }
+            serde_json::from_reader(rdr).unwrap_or_default()
         }
 
         Err(_) => { //? if i cant open it then i just create a fresh list
@@ -112,9 +109,9 @@ fn save_post(post:&RedditPost, filename:&str) {
 
    // DELETE old file and replace it with it's updated version
 
-    match File::create(&filename) {
+    match File::create(filename) {
         Ok(f) => { 
-            serde_json::to_writer_pretty(f, &posts);
+           let _ =  serde_json::to_writer_pretty(f, &posts);
         },
         Err(_) => {
             println!("Could not update the file!");

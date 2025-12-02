@@ -122,7 +122,8 @@ fn save_posts(new_posts:&Vec<RedditPost>, filename:&str) {
 }
 
 
-
+/// ! If i run the program on the piracy subreddit once, then i run it on the foxes, then i run it on the piracy back again, 
+/// !should i delete the previous data from the piracy subreddit or i just keep adding to the json file?
 #[tokio::main]
 async fn main() {
     let args: Args =  Args::parse();
@@ -133,7 +134,7 @@ async fn main() {
    
    // ?? OPTIMIZATION, now i create the client only once, not every n seconds
     let client = Client::builder().user_agent("rust-redditor").build().unwrap_or_default();
-
+    let filename = format!("{}.json", args.subreddit);
 
 
     loop{
@@ -151,12 +152,13 @@ async fn main() {
                     seen_posts.insert(post.id.clone());
 
                     new_posts_to_save.push(post.clone());
-                    save_posts(&new_posts_to_save, "feed.json");
+                    
                 }
             }    
             if !new_posts_to_save.is_empty() {
                 println!("No new posts from {} seconds ago", args.interval);
             }
+            save_posts(&new_posts_to_save, &filename);
         },
         Err(e) => eprintln!("Failed to fetch: {}", e),
     };

@@ -30,11 +30,30 @@ This project relies on the following Rust crates:
 
 ### Prerequisites
 Ensure you have **Rust** and **Cargo** installed.
-1.  Clone the repository.
-2.  Create a `subreddits` directory in the root of the project (if not automatically handled) to store the output files:
-    ```bash
-    mkdir subreddits
-    ```
+Arguments
+
+    <SUBREDDIT> 
+        Short: N/A
+
+        Description: Required. The name of the subreddit to monitor (e.g., rust, piracy).
+
+        Default: N/A
+
+    --sort
+
+        Short: -s
+
+        Description: Sets the sorting method for fetching posts. Options are hot, new, or top.
+
+        Default: hot
+
+    --time
+
+        Short: -t
+
+        Description: The interval (in seconds) between fetch requests.
+
+        Default: 60
 
 ### Running the Tool
 Use `cargo run` followed by the arguments.

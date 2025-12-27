@@ -38,27 +38,30 @@ Ensure you have **Rust** and **Cargo** installed.
 
 ### Running the Tool
 Use `cargo run` followed by the arguments.
-
+Arguments
+Flag	             Short	               Description	                                          Default
+<SUBREDDIT>	          N/A	Required. The name of the subreddit to monitor (e.g., rust, piracy).	N/A
+--sort                -s	Sorting method: hot, new, or top.	                                    hot
+--time	              -t	Interval in seconds between fetch requests.	                            60
 **Syntax:**
 ```bash
 cargo run -- <SUBREDDIT> [OPTIONS]
+```
 
-1. Monitor the 'rust' subreddit (defaults to 'hot', 60s interval):
-Bash
-
+## Examples
+### 1. Monitor the 'rust' subreddit (defaults to 'hot', 60s interval):
+```
 cargo run -- rust
-
-2. Monitor 'foxes' sorted by 'new', checking every 10 seconds:
-Bash
-
+```
+### 2. Monitor 'foxes' sorted by 'new', checking every 10 seconds:
+```
 cargo run -- foxes -s new -t 10
-
-3. Monitor 'technology' sorted by 'top', checking every 5 minutes (300s):
-Bash
-
+```
+### 3. Monitor 'technology' sorted by 'top', checking every 5 minutes (300s):
+```
 cargo run -- technology --sort top --time 300
-
-📂 Output Data
+```
+## 📂 Output Data
 
 The program stores data in the subreddits/ directory.
 
